@@ -1,22 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-
-/// @title Interface for NounsSeeder
-
-/*********************************
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░██░░░████░░██░░░████░░░ *
- * ░░██████░░░████████░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- *********************************/
-
 pragma solidity ^0.8.0;
-import {INounsDescriptor} from "./INounsDescriptor.sol";
 
 interface INounsSeeder {
     struct Seed {
@@ -26,9 +9,4 @@ interface INounsSeeder {
         uint48 head;
         uint48 glasses;
     }
-
-    function generateSeed(uint256 nounId, INounsDescriptor descriptor)
-        external
-        view
-        returns (Seed memory);
 }

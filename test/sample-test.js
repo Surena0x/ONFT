@@ -1,37 +1,41 @@
 const { ethers } = require("hardhat");
+const { expect } = require("chai");
 
 const ImageData = require("./utils/imageData.json");
 
-describe("Test Deploy", function () {
-  it("", async function () {
-    // DEPLOYMENT
-    const NFTDescriptor = await ethers.getContractFactory("NFTDescriptor");
-    const NFTDescriptorContract = await NFTDescriptor.deploy();
-    await NFTDescriptorContract.deployed();
+describe("Test Deploy", async function () {
+  it("Test Pro", async function () {
+    const [, addr1] = await ethers.getSigners();
 
-    // DEPLOYMENT
-    const NounsDescriptor = await ethers.getContractFactory("NounsDescriptor", {
-      libraries: {
-        "contracts/libs/NFTDescriptor.sol:NFTDescriptor":
-          NFTDescriptorContract.address,
-      },
-    });
-    const NounsDescriptorContract = await NounsDescriptor.deploy();
-    await NounsDescriptorContract.deployed();
+    // DEPLOYMENT NFTContract
+    const NFT = await ethers.getContractFactory("NFTContract");
+    const NFTContract = await NFT.deploy();
+    await NFTContract.deployed();
 
-    // DEPLOYMENT
-    const NounsSeeder = await ethers.getContractFactory("NounsSeeder");
-    const NounsSeederContract = await NounsSeeder.deploy();
-    await NounsSeederContract.deployed();
+    // DEPLOYMENT MY CONTRACTS
+    const Master = await ethers.getContractFactory("Master");
+    const MasterContract = await Master.deploy();
+    await MasterContract.deployed();
+
+    const DescriptorStorage = await ethers.getContractFactory(
+      "DescriptorStorage"
+    );
+    const DescriptorStorageContract = await DescriptorStorage.deploy();
+    await DescriptorStorageContract.deployed();
+
+    await MasterContract.setNounsDescriptor(DescriptorStorageContract.address);
+    await MasterContract.setNFTContract(NFTContract.address);
 
     // SETUP
 
     const { bgcolors, palette, images } = ImageData;
     const { bodies, accessories, heads, glasses } = images;
 
-    await NounsDescriptorContract.addManyBackgrounds(bgcolors);
-    await NounsDescriptorContract.addManyColorsToPalette(0, palette);
-    await NounsDescriptorContract.addManyBodies(bodies.map(({ data }) => data));
+    await DescriptorStorageContract.addManyBackgrounds(bgcolors);
+    await DescriptorStorageContract.addManyColorsToPalette(0, palette);
+    await DescriptorStorageContract.addManyBodies(
+      bodies.map(({ data }) => data)
+    );
 
     const accessoriesArray = [];
     for (let i = 0; i < accessories.length; i += 10) {
@@ -39,7 +43,7 @@ describe("Test Deploy", function () {
     }
     accessoriesArray.map(
       async (item) =>
-        await NounsDescriptorContract.addManyAccessories(
+        await DescriptorStorageContract.addManyAccessories(
           item.map(({ data }) => data)
         )
     );
@@ -50,22 +54,32 @@ describe("Test Deploy", function () {
     }
     headsArray.map(
       async (item) =>
-        await NounsDescriptorContract.addManyHeads(item.map(({ data }) => data))
+        await DescriptorStorageContract.addManyHeads(
+          item.map(({ data }) => data)
+        )
     );
 
-    NounsDescriptorContract.addManyGlasses(glasses.map(({ data }) => data));
+    DescriptorStorageContract.addManyGlasses(glasses.map(({ data }) => data));
+
+    await NFTContract.transferOwnership(MasterContract.address);
+    await DescriptorStorageContract.transferOwnership(MasterContract.address);
 
     // TEST DATA
     const nounId = 1;
-    const NounsDescriptorContractAddress = NounsDescriptorContract.address;
 
-    const seed = await NounsSeederContract.generateSeed(
-      nounId,
-      NounsDescriptorContractAddress
-    );
+    const seed = await MasterContract.generateSeed(nounId);
     console.log(seed.toString());
 
-    const svg = await NounsDescriptorContract.generateSVGImage(seed);
-    console.log(svg.toString());
+    const svg = await MasterContract.generateSVGImage(seed);
+    await svg.wait(1);
+
+    const createdSVG = await MasterContract.LastCreatedSVG();
+    console.log(createdSVG.toString());
+
+    const newNFTID = await MasterContract.mintNewNFT(addr1.address);
+    await newNFTID.wait(1);
+
+    expect(await NFTContract.tokenURI(1)).to.equal(createdSVG.toString());
+    expect(await NFTContract.ownerOf(1)).to.equal(addr1.address);
   });
 });
