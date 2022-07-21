@@ -1,38 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
-
-/// @title Vote checkpointing for an ERC-721 token
-
-/*********************************
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░██░░░████░░██░░░████░░░ *
- * ░░██████░░░████████░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░██░░██░░░████░░██░░░████░░░ *
- * ░░░░░░█████████░░█████████░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
- *********************************/
-
-// LICENSE
-// ERC721Checkpointable.sol uses and modifies part of Compound Lab's Comp.sol:
-// https://github.com/compound-finance/compound-protocol/blob/ae4388e780a8d596d97619d9704a931a2752c2bc/contracts/Governance/Comp.sol
-//
-// Comp.sol source code Copyright 2020 Compound Labs, Inc. licensed under the BSD-3-Clause license.
-// With modifications by Nounders DAO.
-//
-// Additional conditions of BSD-3-Clause can be found here: https://opensource.org/licenses/BSD-3-Clause
-//
-// MODIFICATIONS
-// Checkpointing logic from Comp.sol has been used with the following modifications:
-// - `delegates` is renamed to `_delegates` and is set to private
-// - `delegates` is a public function that uses the `_delegates` mapping look-up, but unlike
-//   Comp.sol, returns the delegator's own address if there is no delegate.
-//   This avoids the delegator needing to "delegate to self" with an additional transaction
-// - `_transferTokens()` is renamed `_beforeTokenTransfer()` and adapted to hook into OpenZeppelin's ERC721 hooks.
-
 pragma solidity ^0.8.0;
+
 import "./ERC721Enumerable.sol";
 
 abstract contract ERC721Checkpointable is ERC721Enumerable {
@@ -108,14 +76,14 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      * @dev hooks into OpenZeppelin's `ERC721._transfer`
      */
     function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
+        address _fromAddress,
+        address _toAddress,
+        uint256 _NFTid
     ) internal override {
-        super._beforeTokenTransfer(from, to, tokenId);
+        super._beforeTokenTransfer(_fromAddress, _toAddress, _NFTid);
 
-        /// @notice Differs from `_transferTokens()` to use `delegates` override method to simulate auto-delegation
-        _moveDelegates(delegates(from), delegates(to), 1);
+        // simulate auto-delegation in `_transferTokens()`
+        _moveDelegates(delegates(_fromAddress), delegates(_toAddress), 1);
     }
 
     /**

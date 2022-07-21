@@ -7,6 +7,7 @@ describe("Test Deploy", async function () {
   let NFTContract;
   let MasterContract;
   let DescriptorStorageContract;
+  let MasterDAOContract;
 
   let TX;
   let currentAuction;
@@ -33,9 +34,22 @@ describe("Test Deploy", async function () {
     );
     DescriptorStorageContract = await DescriptorStorage.deploy();
     await DescriptorStorageContract.deployed();
-
     await MasterContract.setNounsDescriptor(DescriptorStorageContract.address);
     await MasterContract.setNFTContract(NFTContract.address);
+
+    const MasterDAO = await ethers.getContractFactory("MasterDAO");
+    MasterDAOContract = await MasterDAO.deploy();
+    await MasterDAOContract.deployed();
+
+    await MasterDAOContract.initialize(
+      "0x0000000000000000000000000000000000000000",
+      NFTContract.address,
+      "0x0000000000000000000000000000000000000000",
+      0,
+      0,
+      0,
+      0
+    );
 
     // SETUP
 
@@ -71,6 +85,13 @@ describe("Test Deploy", async function () {
     );
 
     DescriptorStorageContract.addManyGlasses(glasses.map(({ data }) => data));
+
+    const maxSupply = await NFTContract.maxSupply();
+
+    for (let i = 1; i <= maxSupply; i++) {
+      TX = await NFTContract.mintNFT(MasterContract.address, i);
+      await TX.wait(1);
+    }
 
     await NFTContract.transferOwnership(MasterContract.address);
     await DescriptorStorageContract.transferOwnership(MasterContract.address);
@@ -173,6 +194,21 @@ describe("Test Deploy", async function () {
     });
   });
 
+  describe("Test NFT Contract", () => {
+    it("", async () => {
+      const maxSupply = await NFTContract.maxSupply();
+      expect(maxSupply.toString()).to.equal("10");
+      expect(await NFTContract.ownerOf(1)).to.equal(MasterContract.address);
+
+      const blockNumber = await ethers.provider.getBlockNumber();
+      const getPriorVotes = await NFTContract.getPriorVotes(
+        MasterContract.address,
+        blockNumber - 2
+      );
+      console.log(getPriorVotes.toString());
+    });
+  });
+
   describe("Bid On Current Auction , Mint NFT For Winner, Start New Auction", () => {
     beforeEach(async function () {
       TX = await MasterContract.startGame();
@@ -212,6 +248,31 @@ describe("Test Deploy", async function () {
 
       // we minted new NFT with ID 1 for winner of auction with ID 1 ! let's check it
       expect(await NFTContract.ownerOf(1)).to.equal(addr1.address);
+
+      // console.log((await NFTContract.tokenURI(1)).toString());
+
+      // // let's find can we mint any nft ! because only master contract can do it !
+      // await expect(
+      //   NFTContract.connect(addr2).mintNewNFT("String", addr2.address)
+      // ).to.be.revertedWith("Ownable: caller is not the owner");
+
+      for (let i = 0; i < 10; i++) {
+        ethers.provider.send("evm_mine");
+      }
+
+      const blockNumber = await ethers.provider.getBlockNumber();
+      const getPriorVotes = await NFTContract.getPriorVotes(
+        addr1.address,
+        blockNumber - 1
+      );
+      console.log(getPriorVotes.toString());
+
+      await MasterDAOContract.propose(
+        [MasterContract.address],
+        [ethers.utils.parseEther("1")],
+        [],
+        []
+      );
     });
   });
 });

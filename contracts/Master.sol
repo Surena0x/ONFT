@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import {INounsSeeder} from "./interfaces/INounsSeeder.sol";
+import {INounsSeeder} from "./interfaces/Seeder.sol";
 import {MultiPartRLEToSVG} from "./libs/MultiPartRLEToSVG.sol";
 
 import {Base64} from "base64-sol/base64.sol";
@@ -65,7 +65,7 @@ contract Master is Ownable {
     // // /////////////////////////////////////////////////////////////// SEED FUNCTIONS
 
     function generateSeed(uint256 nounId)
-        internal
+        private
         view
         returns (INounsSeeder.Seed memory)
     {
@@ -93,16 +93,11 @@ contract Master is Ownable {
     // // /////////////////////////////////////////////////////////////// SVG IMAGE FUNCTIONS
 
     function generateSVGImage(INounsSeeder.Seed memory seed)
-        internal
+        private
         returns (string memory)
     {
         LastCreatedSVG = DescriptorStorageContract.generateSVGImage(seed);
         return LastCreatedSVG;
-    }
-
-    // // /////////////////////////////////////////////////////////////// MINT NEW NFT FOR SOLD SVG
-    function mintNewNFT(address _mintTo) external onlyOwner {
-        NFTToken.mintNewNFT(LastCreatedSVG, _mintTo);
     }
 
     // // /////////////////////////////////////////////////////////////// AUCTION
@@ -112,13 +107,13 @@ contract Master is Ownable {
         _createAuction();
     }
 
-    function startGame() external {
+    function startGame() external onlyOwner {
         require(started == false, "Already started !");
         _createAuction();
         started = true;
     }
 
-    function _createAuction() internal {
+    function _createAuction() private {
         auctionIDTracker.increment();
         uint256 _auctionIDTracker = auctionIDTracker.current();
 
@@ -138,11 +133,7 @@ contract Master is Ownable {
         });
     }
 
-    function finishCurrentAuction() external {
-        _finishCurrentAuction();
-    }
-
-    function _finishCurrentAuction() internal {
+    function _finishCurrentAuction() private {
         Auction memory _auction = auction;
 
         require(_auction.startTime != 0, "Auction hasn't begun");
@@ -155,7 +146,7 @@ contract Master is Ownable {
         auction.finished = true;
 
         if (_auction.bidder != address(0)) {
-            NFTToken.mintNewNFT(LastCreatedSVG, _auction.bidder);
+            NFTToken.transferNFTToWinner(_auction.bidder);
         }
     }
 
@@ -189,4 +180,6 @@ contract Master is Ownable {
     function getCurrentAuctionDetails() external view returns (Auction memory) {
         return auction;
     }
+
+    // // /////////////////////////////////////////////////////////////// DAO
 }

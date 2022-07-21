@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {INounsSeeder} from "./interfaces/INounsSeeder.sol";
+import {INounsSeeder} from "./interfaces/Seeder.sol";
 import {MultiPartRLEToSVG} from "./libs/MultiPartRLEToSVG.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
